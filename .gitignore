@@ -1,9 +1,41 @@
-server/node_modules
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Environment
 .env
-
 server/.env
-client/.agent/*
-client/.gemini
-client/node_modules
+client/.env
 
-node_modules
+# DB
+server/data/
+*.db
+*.db-shm
+*.db-wal
+
+# Build
+client/dist/
+server/dist/
+client/dev-dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Agentic / AI Metadata
+GEMINI.md
+CLAUDE.md
+PROJECT_TODO.md
+PROJECT_SPEC.md
+CHANGELOG.md
+.gemini/
+.agent/
+.github/copilot-instructions.md
+**/SKILL.md
