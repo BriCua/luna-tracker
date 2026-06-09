@@ -19,16 +19,27 @@ export default defineConfig({
         short_name: 'Luna',
         description: 'Empathy-first period tracker',
         theme_color: '#8B5CF6',
+        background_color: '#FAF5FF',
+        display: 'standalone',
+        start_url: '/',
         icons: [
           {
-            src: '/favicon.svg',
+            src: 'favicon.svg',
             sizes: '192x192',
-            type: 'image/svg+xml'
+            type: 'image/svg+xml',
+            purpose: 'any'
           },
           {
-            src: '/favicon.svg',
+            src: 'favicon.svg',
             sizes: '512x512',
-            type: 'image/svg+xml'
+            type: 'image/svg+xml',
+            purpose: 'any'
+          },
+          {
+            src: 'favicon.svg',
+            sizes: '512x512',
+            type: 'image/svg+xml',
+            purpose: 'maskable'
           }
         ]
       },
