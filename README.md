@@ -28,6 +28,7 @@ An empathy-first, mobile-first PWA period tracker designed for partners. Luna he
 ### Deployment (Recommended)
 
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/BriCua/luna-tracker.git
    cd luna-tracker
@@ -35,6 +36,7 @@ An empathy-first, mobile-first PWA period tracker designed for partners. Luna he
 
 2. **Setup Environment Variables**:
    Create a `.env` file in the root:
+
    ```env
    GROQ_API_KEY=your_key_here
    VAPID_PUBLIC_KEY=your_public_key
@@ -52,6 +54,7 @@ An empathy-first, mobile-first PWA period tracker designed for partners. Luna he
 ### Local Development
 
 1. **Install dependencies**:
+
    ```bash
    npm install
    npm install --prefix client
@@ -62,6 +65,7 @@ An empathy-first, mobile-first PWA period tracker designed for partners. Luna he
    ```bash
    npm run dev
    ```
+
    - Frontend: `http://localhost:5173`
    - Backend: `http://localhost:3000`
 
@@ -76,4 +80,5 @@ An empathy-first, mobile-first PWA period tracker designed for partners. Luna he
 Designed for use over a private VPN (Tailscale, WireGuard). Access control is managed at the network level.
 
 ---
-*Created for partners who want to be more present.*
+
+_Created for partners who want to be more present._
