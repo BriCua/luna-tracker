@@ -5,45 +5,65 @@
 
 Remaining tasks prioritized by importance for system stability, user experience, and long-term maintenance.
 
-| Priority | Task | Category | Importance |
-| :--- | :--- | :--- | :--- |
-| 1 | **Phase Engine & Status API** | Core | Without this nothing else works — all UI derives from it |
-| 2 | **SQLite Schema Init** | Core | DB must exist before any route can run |
-| 3 | **SetupScreen + First-Run Flow** | UX | App is unusable without initial `last_period_date` input |
-| 4 | **PhaseCard with Tips Tabs** | UX | The primary daily screen — main value prop of the app |
-| 5 | **Push Notification Subscription** | Feature | Reminders are a core feature; needs VAPID setup + service worker |
-| 6 | **node-cron Notification Job** | Feature | Triggers the 7/3/2/1 day reminders automatically |
-| 7 | **Groq AI Chatbot** | Feature | Phase-aware assistant; enhances but doesn't block core use |
-| 8 | **Docker Compose Setup** | Technical | Required for home server deployment |
-| 9 | **Dead Subscription Cleanup** | Technical | Prevents push errors accumulating silently over time |
-| 10 | **Timezone Config for Cron** | Technical | Cron fires at wrong local time if server TZ is not set |
+| Priority | Task                                    | Category  | Status  |
+| :------- | :-------------------------------------- | :-------- | :------ |
+| 1        | **SQLite Schema Init**                  | Core      | ✅ Done |
+| 2        | **Phase Engine + Late Period Handling** | Core      | ✅ Done |
+| 3        | **Cycle Routes**                        | Core      | ✅ Done |
+| 4        | **Push Service**                        | Core      | ✅ Done |
+| 5        | **Groq Client**                         | Core      | ✅ Done |
+| 6        | **Chat Route**                          | Core      | ✅ Done |
+| 7        | **Push Routes**                         | Core      | ✅ Done |
+| 8        | **Cron Job**                            | Core      | ✅ Done |
+| 9        | **Zustand Store**                       | Frontend  | ✅ Done |
+| 10       | **App.tsx + Conditional Render**        | Frontend  | ✅ Done |
+| 11       | **SetupScreen**                         | UX        | ✅ Done |
+| 12       | **PhaseCard + Countdown**               | UX        | ✅ Done |
+| 13       | **NotificationSetup**                   | Feature   | ✅ Done |
+| 14       | **ChatBot Drawer**                      | Feature   | ✅ Done |
+| 15       | **Service Worker**                      | Technical | ✅ Done |
+| 16       | **Docker Compose + Dockerfiles**        | Technical | ✅ Done |
+| 17       | **Timezone Config**                     | Technical | ✅ Done |
 
 ---
 
 ## Detailed Breakdown
 
-### High Priority (1–3)
+### ✅ Completed — Backend
 
-- **Phase Engine & Status API:** Implement `getCurrentPhase(lastPeriodDate, cycleLength)` and `getNextPeriodDate()` in `server/src/services/phaseEngine.js` using `date-fns`. Formula: `dayOfCycle = (differenceInDays(today, lastPeriodDate) % cycleLength) + 1`. Map day to phase using the ranges in `PHASES` constant (menstruation 1–5, follicular 6–13, ovulation 14–16, luteal 17–end). Wire to `GET /api/cycle/status` which returns `{ configured, phase, next, settings }`. Phase is never stored — always recalculated on request.
+- **SQLite Schema Init** (`server/src/db/index.ts`): Opens DB at `/app/data/luna.db`, creates data directory if missing, runs `CREATE TABLE IF NOT EXISTS` for `cycle`, `push_subscriptions`, `notification_log`. WAL pragma and foreign keys enabled. Exports `db` singleton, `CycleSettings` type, and `PushSubscription` type.
 
-- **SQLite Schema Init:** In `server/src/db/index.js`, open the database at `/app/data/luna.db` (path must exist — Docker volume handles this). Run `db.exec(...)` on startup to `CREATE TABLE IF NOT EXISTS` for `cycle`, `push_subscriptions`, and `notification_log`. Export the `db` instance for use in routes and services.
+- **Phase Engine** (`server/src/services/phaseEngine.ts`): `getCurrentPhase(lastPeriodDate, cycleLength)` calculates `dayOfCycle` via modulo, maps to phase via `PHASES` constant. Late period handling: if `rawDay >= cycleLength`, freezes at last luteal day, sets `isLate: true` and `daysLate: number` instead of rolling over silently. `getNextPeriodDate()` returns predicted date and `daysUntil` (clamped to 0 if already late). Exports `PhaseKey`, `PhaseTips`, `Phase`, `CurrentPhase`, `NextPeriod` types.
 
-- **SetupScreen + First-Run Flow:** In `client/src/App.jsx`, call `fetchStatus()` on mount. If `configured === false`, render `<SetupScreen />`. The setup screen needs a date input (last period start), a cycle length input (default 28), and a submit button that calls `POST /api/cycle/setup`. On success, re-fetch status and transition to the main dashboard. Use HTML `<input type="date">` — no third-party date picker needed for MVP.
+- **Cycle Routes** (`server/src/routes/cycle.ts`): `GET /api/cycle/status` returns `{ configured, phase, next, settings }` — returns `{ configured: false }` if no cycle exists. `POST /api/cycle/setup` inserts first cycle record, returns phase immediately. `PUT /api/cycle/update` updates existing record by latest `id`.
 
-### Medium Priority (4–7)
+- **Push Service** (`server/src/services/pushService.ts`): `sendToAll(payload)` fetches all subscriptions from SQLite, calls `sendOne()` for each via `Promise.allSettled()`. `sendOne()` deletes subscription from DB on `410 Gone` response. VAPID configured at module load time via `webpush.setVapidDetails()`.
 
-- **PhaseCard with Tips Tabs:** In `client/src/components/PhaseCard.jsx`, display: phase name, phase color (background accent), day of cycle (`Day X of Y`), and a tab strip with four tabs — Diet, Activity, How to Treat, How to Talk. Each tab renders the corresponding tip text from the phase object. Use Tailwind for the color-coded accent. The `Countdown.jsx` component renders a pill showing days until next period, changing color as urgency increases (green → amber → red).
+- **Groq Client** (`server/src/services/groqClient.ts`): `new Groq()` auto-reads `GROQ_API_KEY`. `chat(messages, phase)` prepends phase-aware system prompt built by `buildSystemPrompt(phase)`. System prompt includes late period context if `phase.isLate`. Returns `{ reply, tokens }`.
 
-- **Push Notification Subscription:** In `NotificationSetup.jsx`, call `Notification.requestPermission()`. On grant, fetch VAPID public key from `GET /api/push/vapid-public-key`, call `navigator.serviceWorker.ready.pushManager.subscribe(...)`, and `POST /api/push/subscribe` with the subscription object. Store a boolean in Zustand (`notificationsEnabled`) and show toggle state in the UI. The service worker's `push` event handler in `src/sw.js` must call `self.registration.showNotification(data.title, { body, icon })`.
+- **Chat Route** (`server/src/routes/chat.ts`): `POST /api/chat` validates messages array, fetches current phase from DB, calls `groqClient.chat()`, returns `{ reply }`. Logs token usage server-side only.
 
-- **node-cron Notification Job:** In `server/src/cron.js`, schedule a job with `cron.schedule('0 8 * * *', ...)`. Fetch the cycle row from SQLite, compute `daysUntil = getNextPeriodDate(...)`. If `daysUntil` is in `[7, 3, 2, 1]`, fetch all rows from `push_subscriptions` and call `sendNotification()` for each. Log each send to `notification_log`. Import `cron.js` in `server/src/index.js` so it registers on startup.
+- **Push Routes** (`server/src/routes/push.ts`): `GET /api/push/vapid-public-key` returns public key from env. `POST /api/push/subscribe` upserts subscription using `ON CONFLICT DO UPDATE`. `DELETE /api/push/unsubscribe` removes by endpoint, returns 404 if not found.
 
-- **Groq AI Chatbot:** In `server/src/services/groqClient.js`, initialize `new Groq({ apiKey: process.env.GROQ_API_KEY })`. The `chat(messages, phaseContext)` function prepends a system message with phase name, day, and tip summaries, then calls `groq.chat.completions.create({ model: 'llama-3.3-70b-versatile', messages: [system, ...messages] })`. In `ChatBot.jsx`, maintain `messages` array in React state. On send, append user message, POST to `/api/chat`, append assistant reply. Render as a simple slide-up drawer triggered by a floating button.
+- **Cron Job** (`server/src/cron.ts`): `0 8 * * *` schedule. Fetches cycle, computes `daysUntil`, checks against `[7, 3, 2, 1]`. Calls `sendToAll()` with urgency-appropriate payload from `buildPayload(daysUntil)`. Logs to `notification_log` table after send.
 
-### Low Priority (8–10)
+---
 
-- **Docker Compose Setup:** Write `server/Dockerfile` (Node 20 Alpine, copy `package*.json`, `npm ci --omit=dev`, copy `src/`), `client/Dockerfile` (multi-stage: Node build then Nginx), and `client/nginx.conf` (proxy `/api/` to `http://backend:3000/api/`, `try_files` fallback to `index.html`). Root `docker-compose.yml` should define `frontend` (ports 80:80) and `backend` (expose 3000, volume `db-data:/app/data`, env vars from `.env`). Add `TZ: Asia/Jakarta` (or user's timezone) to the backend service environment.
+### ✅ Completed — Frontend
 
-- **Dead Subscription Cleanup:** In `server/src/services/pushService.js`, wrap `webpush.sendNotification()` in a try/catch. If the error has `statusCode === 410` (subscription expired/unregistered), delete the row from `push_subscriptions` where `endpoint` matches. This prevents the subscription table from accumulating dead entries silently.
+- **Zustand Store** (`client/src/store/cycleStore.ts`): Cycle state management with Axios actions for status and setup.
+- **App.tsx**: Main orchestrator with conditional rendering and global loading states.
+- **SetupScreen**: Mobile-friendly onboarding form with date picker and cycle length slider.
+- **PhaseCard + Countdown**: High-impact UI displaying phase names, color-coded accents, and empathetic tips.
+- **NotificationSetup**: Web Push subscription workflow with VAPID key conversion.
+- **ChatBot Drawer**: Floating AI chat with phase-aware context and empathetic system prompt.
+- **Service Worker**: PWA support with precaching and push notification event handling.
 
-- **Timezone Config for Cron:** Add `TZ=Asia/Jakarta` (or correct timezone) to the backend service in `docker-compose.yml` under `environment`. Without this, `node-cron`'s `0 8 * * *` fires at 08:00 UTC, which may be the wrong local time. Validate by checking server time: `docker exec <backend-container> date`.
+---
+
+### ✅ Completed — Infrastructure
+
+- **Docker Compose**: Orchestrates `frontend` (Nginx) and `backend` (Node) containers.
+- **Dockerfiles**: Multi-stage builds for optimized image sizes.
+- **Nginx Config**: Reverse proxy for API calls and SPA routing support.
+- **Timezone Config**: `TZ: Asia/Jakarta` for accurate daily cron notifications.

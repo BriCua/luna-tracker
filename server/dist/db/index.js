@@ -1,21 +1,14 @@
-import Database from 'better-sqlite3'
-import path from 'path'
-import fs from 'fs'
-import { fileURLToPath } from 'url'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const DB_PATH = path.join(__dirname, '..', '..', 'data', 'luna.db')
-
-const DATA_DIR = path.dirname(DB_PATH)
+import Database from 'better-sqlite3';
+import path from 'path';
+import fs from 'fs';
+const DB_PATH = path.join(__dirname, '..', '..', 'data', 'luna.db');
+const DATA_DIR = path.dirname(DB_PATH);
 if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true })
+    fs.mkdirSync(DATA_DIR, { recursive: true });
 }
-
-const db = new Database(DB_PATH)
-
-db.pragma('journal_mode = WAL')
-db.pragma('foreign_keys = ON')
-
+const db = new Database(DB_PATH);
+db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
 db.exec(`
   CREATE TABLE IF NOT EXISTS cycle (
     id               INTEGER PRIMARY KEY,
@@ -38,22 +31,5 @@ db.exec(`
     type    TEXT    NOT NULL,
     sent_at TEXT    NOT NULL DEFAULT (datetime('now'))
   );
-`)
-
-export type CycleSettings = {
-  id: number
-  last_period_date: string
-  cycle_length: number
-  period_duration: number
-  updated_at: string
-}
-
-export type PushSubscription = {
-  id: number
-  endpoint: string
-  p256dh: string
-  auth: string
-  created_at: string
-}
-
-export default db
+`);
+export default db;
