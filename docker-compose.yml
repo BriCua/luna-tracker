@@ -4,7 +4,7 @@ services:
       context: ./client
       dockerfile: Dockerfile
     ports:
-      - "8080:80"
+      - "2314:80"
     restart: unless-stopped
     depends_on:
       - backend
