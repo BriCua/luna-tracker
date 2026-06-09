@@ -15,6 +15,7 @@ export default defineConfig({
       filename: 'sw.ts',
       strategies: 'injectManifest',
       manifest: {
+        id: '/',
         name: 'Luna Tracker',
         short_name: 'Luna',
         description: 'Empathy-first period tracker',
@@ -24,22 +25,32 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'favicon.svg',
+            src: '/favicon.svg',
             sizes: '192x192',
             type: 'image/svg+xml',
             purpose: 'any'
           },
           {
-            src: 'favicon.svg',
-            sizes: '512x512',
-            type: 'image/svg+xml',
-            purpose: 'any'
-          },
-          {
-            src: 'favicon.svg',
+            src: '/favicon.svg',
             sizes: '512x512',
             type: 'image/svg+xml',
             purpose: 'maskable'
+          }
+        ],
+        screenshots: [
+          {
+            src: '/favicon.svg',
+            sizes: '512x512',
+            type: 'image/svg+xml',
+            form_factor: 'wide',
+            label: 'Luna Tracker'
+          },
+          {
+            src: '/favicon.svg',
+            sizes: '512x512',
+            type: 'image/svg+xml',
+            form_factor: 'narrow',
+            label: 'Luna Tracker'
           }
         ]
       },
